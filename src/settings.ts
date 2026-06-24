@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: JustifySettings = {
 	greedyFallback: true,
 	minSpacingRatio: 0.5,
 	tightPenaltyThreshold: 0.75,
+	minWidth: 100,
 };
 
 export class PretextJustifySettingTab extends PluginSettingTab {

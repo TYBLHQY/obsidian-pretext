@@ -8,6 +8,9 @@
 !*.ts
 !*.md
 !LICENSE
+
+# GitHub Actions workflows
+!.github/**
 node_modules/
 main.js
 .claude/

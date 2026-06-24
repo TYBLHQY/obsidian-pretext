@@ -2,12 +2,6 @@
 
 Knuth-Plass optimal line-breaking for the Obsidian reading view. Replaces the browser's default word-wrap with typographically optimal paragraph layout.
 
-## Quick Start
-
-1. Install the plugin from Community Plugins in Obsidian (search "Pretext Justify").
-2. Toggle **Enable justification** in the plugin settings (enabled by default).
-3. Open any note in reading view — paragraphs re-render with optimal line breaks.
-
 ## Features
 
 | Feature | Description |
@@ -17,7 +11,7 @@ Knuth-Plass optimal line-breaking for the Obsidian reading view. Replaces the br
 | Last-line handling | Last line left-aligned; overflow prevention via DP penalty |
 | Resize responsiveness | Auto re-justifies on width change, throttled via rAF (2 paragraphs per frame) |
 | Inline formatting | Preserves bold, italic, links, code — anything the reading view renders within a paragraph |
-| Settings | Toggle, hyphenation, minimum spacing ratio, tight penalty threshold |
+| Fully offline | All processing happens locally — no network requests, no telemetry, no analytics |
 
 ## How it works
 
@@ -38,6 +32,10 @@ For the last line, the algorithm penalizes break choices whose natural width (wo
 
 The plugin uses [Pretext](https://github.com/chenglou/pretext) for text measurement via Canvas API, and preserves DOM structure by extracting character ranges from a clone of the original paragraph — inline formatting survives the transformation.
 
+### Third-party code
+
+This plugin bundles [@chenglou/pretext](https://github.com/chenglou/pretext) (MIT) for Canvas-based text measurement. See the [LICENSE](LICENSE) file for the full MIT terms.
+
 ## Configuration
 
 | Setting | Default | Description |
@@ -47,11 +45,18 @@ The plugin uses [Pretext](https://github.com/chenglou/pretext) for text measurem
 | Minimum spacing ratio | 0.50 | Lowest allowed word spacing as a fraction of normal space (0.30–0.90) |
 | Tight penalty threshold | 0.75 | Fraction of normal space below which the algorithm penalizes tight lines (0.50–1.00) |
 
+## Compliance
+
+- **No network access** — all processing is local to the device. No data is sent or received.
+- **No telemetry** — no analytics, no crash reporting, no usage tracking of any kind.
+- **No ads** — the plugin displays no advertisements.
+- **No self-updating** — updates are handled exclusively through Obsidian's built-in plugin update mechanism.
+
 ## Development
 
 ```bash
-git clone https://github.com/your-username/obsidian-pretext-justify
-cd obsidian-pretext-justify
+git clone https://github.com/TYBLHQY/obsidian-pretext
+cd obsidian-pretext
 npm install
 npm run build
 ```

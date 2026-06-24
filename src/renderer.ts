@@ -36,6 +36,8 @@ export interface JustifySettings {
 	minSpacingRatio: number;
 	/** Tight penalty threshold as a fraction of normal space width (0.5–1.0) */
 	tightPenaltyThreshold: number;
+	/** Minimum paragraph width in px below which justification is skipped */
+	minWidth: number;
 }
 
 export const DEFAULT_SETTINGS: JustifySettings = {
@@ -44,6 +46,7 @@ export const DEFAULT_SETTINGS: JustifySettings = {
 	greedyFallback: true,
 	minSpacingRatio: 0.5,
 	tightPenaltyThreshold: 0.75,
+	minWidth: 100,
 };
 
 // ---------------------------------------------------------------------------
