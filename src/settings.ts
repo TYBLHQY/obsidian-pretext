@@ -27,7 +27,7 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Pretext Justify" });
+		new Setting(containerEl).setName("Pretext Justify").setHeading();
 
 		new Setting(containerEl)
 			.setName("Enable justification")
@@ -70,7 +70,6 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 			)
 			.addExtraButton((btn) => {
 				btn.setIcon("reset")
-					.setTooltip("Restore default")
 					.onClick(async () => {
 						this.plugin.settings.minSpacingRatio = DEFAULT_SETTINGS.minSpacingRatio;
 						await this.plugin.saveSettings();
@@ -82,7 +81,6 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 				slider
 					.setLimits(0.3, 0.9, 0.05)
 					.setValue(this.plugin.settings.minSpacingRatio)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.minSpacingRatio = value;
 						await this.plugin.saveSettings();
@@ -101,7 +99,6 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 			)
 			.addExtraButton((btn) => {
 				btn.setIcon("reset")
-					.setTooltip("Restore default")
 					.onClick(async () => {
 						this.plugin.settings.tightPenaltyThreshold = DEFAULT_SETTINGS.tightPenaltyThreshold;
 						await this.plugin.saveSettings();
@@ -113,7 +110,6 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 				slider
 					.setLimits(0.5, 1.0, 0.05)
 					.setValue(this.plugin.settings.tightPenaltyThreshold)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.tightPenaltyThreshold = value;
 						await this.plugin.saveSettings();

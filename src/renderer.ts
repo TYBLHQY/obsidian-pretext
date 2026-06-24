@@ -80,8 +80,8 @@ function getOrPrepare(
 
 	// Evict oldest entries when cache grows too large
 	if (_prepareCache.size > 200) {
-		const firstKey = _prepareCache.keys().next();
-		if (firstKey.value) _prepareCache.delete(firstKey.value);
+		const firstKey = _prepareCache.keys().next().value;
+		if (firstKey !== undefined) _prepareCache.delete(firstKey);
 	}
 
 	return prepared;
@@ -252,7 +252,7 @@ function cleanupHyphensInFragment(
 }
 
 function removeSoftHyphens(root: Node): void {
-	const walker = (root.ownerDocument ?? document).createTreeWalker(
+	const walker = (root.ownerDocument ?? activeDocument).createTreeWalker(
 		root,
 		NodeFilter.SHOW_TEXT,
 	);

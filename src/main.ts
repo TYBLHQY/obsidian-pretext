@@ -16,8 +16,8 @@ import { PretextJustifySettingTab, DEFAULT_SETTINGS } from "./settings";
 function debounce(fn: () => void, ms: number): () => void {
   let timer: number | null = null;
   return () => {
-    if (timer !== null) activeWindow.clearTimeout(timer);
-    timer = activeWindow.setTimeout(() => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
       timer = null;
       fn();
     }, ms);
@@ -37,7 +37,7 @@ export default class PretextJustifyPlugin extends Plugin {
     {
       originalFont: string;
       contentWidth: number;
-      originalHTML: string;
+      originalChildren: Node[];
       justifiedAt: number;
     }
   >();
@@ -81,9 +81,9 @@ export default class PretextJustifyPlugin extends Plugin {
         this._pending.clear();
 
         if (this._fileSwitchDebounce !== null) {
-          activeWindow.clearTimeout(this._fileSwitchDebounce);
+          window.clearTimeout(this._fileSwitchDebounce);
         }
-        this._fileSwitchDebounce = activeWindow.setTimeout(() => {
+        this._fileSwitchDebounce = window.setTimeout(() => {
           this._fileSwitchDebounce = null;
           if (!this.settings.enabled) return;
           this._observePreviewViews();
@@ -117,15 +117,15 @@ export default class PretextJustifyPlugin extends Plugin {
 
   onunload(): void {
     if (this._processingRAF !== null) {
-      activeWindow.cancelAnimationFrame(this._processingRAF);
+      window.cancelAnimationFrame(this._processingRAF);
       this._processingRAF = null;
     }
     if (this._scrollRAF !== null) {
-      activeWindow.cancelAnimationFrame(this._scrollRAF);
+      window.cancelAnimationFrame(this._scrollRAF);
       this._scrollRAF = null;
     }
     if (this._fileSwitchDebounce !== null) {
-      activeWindow.clearTimeout(this._fileSwitchDebounce);
+      window.clearTimeout(this._fileSwitchDebounce);
       this._fileSwitchDebounce = null;
     }
     this._resizeObserver?.disconnect();
@@ -142,8 +142,8 @@ export default class PretextJustifyPlugin extends Plugin {
   // ------------------------------------------------------------------
 
   async loadSettings(): Promise<void> {
-    const saved = await this.loadData();
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+    const saved = (await this.loadData()) as Partial<JustifySettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, saved ?? {});
   }
 
   async saveSettings(): Promise<void> {
@@ -186,7 +186,9 @@ export default class PretextJustifyPlugin extends Plugin {
         if (!doc || !parent) continue;
 
         const freshP = doc.createElement("p");
-        freshP.innerHTML = info.originalHTML;
+        freshP.replaceChildren(
+    ...info.originalChildren.map((n) => n.cloneNode(true)),
+  );
         parent.replaceChild(freshP, el);
 
         this._pending.add(freshP);
@@ -205,7 +207,7 @@ export default class PretextJustifyPlugin extends Plugin {
     if (!this.settings.enabled) return;
     if (this._scrollRAF !== null) return;
 
-    this._scrollRAF = activeWindow.requestAnimationFrame(() => {
+    this._scrollRAF = window.requestAnimationFrame(() => {
       this._scrollRAF = null;
       this._scanForMissedParagraphs();
       this._scheduleProcessing();
@@ -222,7 +224,7 @@ export default class PretextJustifyPlugin extends Plugin {
     if (this._processingRAF !== null) return;
     if (this._pending.size === 0) return;
 
-    this._processingRAF = activeWindow.requestAnimationFrame(() => {
+    this._processingRAF = window.requestAnimationFrame(() => {
       this._processingRAF = null;
       this._processBatch();
     });
@@ -302,13 +304,13 @@ export default class PretextJustifyPlugin extends Plugin {
     font: string,
     now: number,
   ): void {
-    const origHTML = p.innerHTML;
+    const origChildren = Array.from(p.childNodes);
     const container = this._justifyInternal(p, font);
     if (container) {
       this._justified.set(container, {
         originalFont: font,
         contentWidth: container.getBoundingClientRect().width,
-        originalHTML: origHTML,
+        originalChildren: origChildren,
         justifiedAt: now,
       });
     }
@@ -366,7 +368,9 @@ export default class PretextJustifyPlugin extends Plugin {
       if (!doc || !parent) continue;
 
       const freshP = doc.createElement("p");
-      freshP.innerHTML = info.originalHTML;
+      freshP.replaceChildren(
+    ...info.originalChildren.map((n) => n.cloneNode(true)),
+  );
       parent.replaceChild(freshP, el);
 
       this._pending.add(freshP);

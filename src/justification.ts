@@ -36,7 +36,7 @@ export function measureSpaceWidth(font: string): number {
 	const cached = _spaceCache.get(font);
 	if (cached !== undefined) return cached;
 
-	const ctx = document.createElement("canvas").getContext("2d");
+	const ctx = activeDocument.createElement("canvas").getContext("2d");
 	if (!ctx) {
 		// fallback: typical space width ≈ 0.25 × font-size
 		const size = parseFloat(font);
@@ -60,7 +60,7 @@ export function measureHyphenWidth(font: string): number {
 	const cached = _hyphenCache.get(font);
 	if (cached !== undefined) return cached;
 
-	const ctx = document.createElement("canvas").getContext("2d");
+	const ctx = activeDocument.createElement("canvas").getContext("2d");
 	if (!ctx) {
 		const fallback = 5;
 		_hyphenCache.set(font, fallback);
