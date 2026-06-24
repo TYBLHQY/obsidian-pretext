@@ -1,0 +1,33 @@
+/*
+ * Pretext Justify — Knuth-Plass optimal justification for Obsidian.
+ *
+ * .pretext-container  replaces the original <p> element.
+ * .pretext-line       each justified line is a block-level <div>.
+ */
+
+.pretext-container {
+	display: block;
+	/* Inherit line-height and font from the theme */
+	line-height: inherit;
+	font-size: inherit;
+	font-family: inherit;
+}
+
+.pretext-container + .pretext-container {
+	margin-top: 0;
+}
+
+.pretext-line {
+	display: block;
+	white-space: nowrap;
+	overflow: visible;
+	/* Last lines get automatic flush-left via the absence of word-spacing */
+}
+
+/*
+ * When the plugin is disabled, ensure text returns to normal wrapping.
+ */
+.markdown-rendered p {
+	word-break: normal;
+	overflow-wrap: break-word;
+}

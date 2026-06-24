@@ -1,0 +1,12 @@
+*
+!**/.*
+!*.json
+!*.mjs
+!*.css
+!src/
+!src/**
+!*.ts
+!*.md
+node_modules/
+main.js
+.claude/
