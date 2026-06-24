@@ -5,8 +5,10 @@ import {
   revertToParagraph,
   clearPrepareCache,
   clearFontMetricsCache,
+  setPrepareCacheMaxSize,
   type JustifySettings,
 } from "./renderer";
+import { clearCache as clearPretextCache } from "@chenglou/pretext";
 import { PretextJustifySettingTab, DEFAULT_SETTINGS } from "./settings";
 
 // ---------------------------------------------------------------------------
@@ -61,13 +63,10 @@ export default class PretextJustifyPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings();
 
-    this.addSettingTab(new PretextJustifySettingTab(this.app, this));
+    // Apply cache limit from settings
+    setPrepareCacheMaxSize(this.settings.maxCacheEntries);
 
-    this.addCommand({
-      id: "toggle-justification",
-      name: "Toggle justification",
-      callback: () => this.toggle(),
-    });
+    this.addSettingTab(new PretextJustifySettingTab(this.app, this));
 
     // Markdown post-processor — runs on every rendered section
     this.registerMarkdownPostProcessor((el) => {
@@ -85,7 +84,6 @@ export default class PretextJustifyPlugin extends Plugin {
         }
         this._fileSwitchDebounce = window.setTimeout(() => {
           this._fileSwitchDebounce = null;
-          if (!this.settings.enabled) return;
           this._observePreviewViews();
           this._scanForMissedParagraphs();
           this._scheduleProcessing();
@@ -135,6 +133,7 @@ export default class PretextJustifyPlugin extends Plugin {
     this._justified.clear();
     clearPrepareCache();
     clearFontMetricsCache();
+    clearPretextCache();
   }
 
   // ------------------------------------------------------------------
@@ -148,32 +147,15 @@ export default class PretextJustifyPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+    setPrepareCacheMaxSize(this.settings.maxCacheEntries);
   }
 
   // ------------------------------------------------------------------
-  // Toggle / refresh
+  // Refresh
   // ------------------------------------------------------------------
-
-  async toggle(): Promise<void> {
-    this.settings.enabled = !this.settings.enabled;
-    await this.saveSettings();
-    if (this.settings.enabled) {
-      this.refresh();
-    } else {
-      this._pending.clear();
-      this._revertAll();
-      this._justified.clear();
-    }
-  }
 
   /** Re-justify every tracked element (used after settings change). */
   refresh(): void {
-    if (!this.settings.enabled) {
-      this._revertAll();
-      this._justified.clear();
-      return;
-    }
-
     const entries = Array.from(this._justified.entries());
 
     if (entries.length > 0) {
@@ -204,7 +186,6 @@ export default class PretextJustifyPlugin extends Plugin {
   // ------------------------------------------------------------------
 
   private _onScroll = (): void => {
-    if (!this.settings.enabled) return;
     if (this._scrollRAF !== null) return;
 
     this._scrollRAF = window.requestAnimationFrame(() => {
@@ -219,7 +200,6 @@ export default class PretextJustifyPlugin extends Plugin {
   // ------------------------------------------------------------------
 
   private _scheduleProcessing(): void {
-    if (!this.settings.enabled) return;
     if (this._fileSwitchDebounce !== null) return; // wait for file-settle window
     if (this._processingRAF !== null) return;
     if (this._pending.size === 0) return;
@@ -321,8 +301,6 @@ export default class PretextJustifyPlugin extends Plugin {
    * or null if justification was skipped.
    */
   private _justifyInternal(p: HTMLElement, font: string): HTMLElement | null {
-    if (!this.settings.enabled) return null;
-
     const w = p.getBoundingClientRect().width;
     if (w < this.settings.minWidth) return null;
 
@@ -339,7 +317,6 @@ export default class PretextJustifyPlugin extends Plugin {
   // ------------------------------------------------------------------
 
   private _rejustifyAll(): void {
-    if (!this.settings.enabled) return;
     if (this._justified.size === 0) return;
 
     // Cooldown: if we just completed a batch pass within the last 2 s,

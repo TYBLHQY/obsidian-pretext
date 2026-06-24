@@ -18,6 +18,7 @@ import {
 	computeGreedyLayout,
 	measureSpaceWidth,
 	measureHyphenWidth,
+	clearJustificationCaches,
 } from "./justification";
 import type { JustifiedLine } from "./types";
 
@@ -26,8 +27,6 @@ import type { JustifiedLine } from "./types";
 // ---------------------------------------------------------------------------
 
 export interface JustifySettings {
-	/** Enable/disable the plugin globally */
-	enabled: boolean;
 	/** Enable/disable hyphenation */
 	hyphenate: boolean;
 	/** Use greedy algorithm as fallback */
@@ -38,15 +37,17 @@ export interface JustifySettings {
 	tightPenaltyThreshold: number;
 	/** Minimum paragraph width in px below which justification is skipped */
 	minWidth: number;
+	/** Maximum entries in the prepared-text cache (50–1000) */
+	maxCacheEntries: number;
 }
 
 export const DEFAULT_SETTINGS: JustifySettings = {
-	enabled: true,
 	hyphenate: true,
 	greedyFallback: true,
 	minSpacingRatio: 0.5,
 	tightPenaltyThreshold: 0.75,
 	minWidth: 100,
+	maxCacheEntries: 200,
 };
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,22 @@ interface PrepareCacheEntry {
 }
 
 const _prepareCache = new Map<string, PrepareCacheEntry>();
+let _prepareCacheMaxSize = 200;
+
+/**
+ * Set the maximum number of prepared-text cache entries.
+ * Also clears the cache if the new limit is lower than the current size.
+ */
+export function setPrepareCacheMaxSize(size: number): void {
+	_prepareCacheMaxSize = Math.max(50, Math.min(1000, size));
+	if (_prepareCache.size > _prepareCacheMaxSize) {
+		let toDelete = _prepareCache.size - _prepareCacheMaxSize;
+		for (const key of _prepareCache.keys()) {
+			_prepareCache.delete(key);
+			if (--toDelete <= 0) break;
+		}
+	}
+}
 
 function getOrPrepare(
 	text: string,
@@ -79,10 +96,12 @@ function getOrPrepare(
 	_prepareCache.set(key, { prepared, font, text });
 
 	// Evict oldest entries when cache grows too large
-	if (_prepareCache.size > 200) {
+	const maxSize = _prepareCacheMaxSize;
+	if (_prepareCache.size > maxSize) {
+		let toDelete = _prepareCache.size - maxSize;
 		for (const key of _prepareCache.keys()) {
 			_prepareCache.delete(key);
-			break;
+			if (--toDelete <= 0) break;
 		}
 	}
 
@@ -117,6 +136,7 @@ function getFontMetrics(font: string): FontMetrics {
 
 export function clearFontMetricsCache(): void {
 	_fontMetricsCache.clear();
+	clearJustificationCaches();
 }
 
 // ---------------------------------------------------------------------------
@@ -282,8 +302,6 @@ export function justifyParagraph(
 	settings: JustifySettings,
 	font: string,
 ): HTMLElement | null {
-	if (!settings.enabled) { return null; }
-
 	const maxWidth = p.getBoundingClientRect().width;
 
 	// Account for padding

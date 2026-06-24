@@ -40,10 +40,10 @@ This plugin bundles [@chenglou/pretext](https://github.com/chenglou/pretext) (MI
 
 | Setting | Default | Description |
 |---|---|---|
-| Enable justification | On | Master toggle |
 | Hyphenation | On | Insert soft hyphens for more even spacing |
 | Minimum spacing ratio | 0.50 | Lowest allowed word spacing as a fraction of normal space (0.30–0.90) |
 | Tight penalty threshold | 0.75 | Fraction of normal space below which the algorithm penalizes tight lines (0.50–1.00) |
+| Text cache size | 200 | Number of paragraphs cached to avoid remeasurement on resize (50–1000) |
 
 ## Compliance
 

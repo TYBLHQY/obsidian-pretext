@@ -31,3 +31,16 @@
 	word-break: normal;
 	overflow-wrap: break-word;
 }
+
+/*
+ * Slider value label: shows current value inline before the slider.
+ */
+.slider-value {
+	display: inline-block;
+	min-width: 2.5em;
+	text-align: right;
+	margin-right: 0.5em;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}

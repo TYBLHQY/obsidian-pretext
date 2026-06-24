@@ -7,12 +7,12 @@ import type PretextJustifyPlugin from "./main";
 import type { JustifySettings } from "./renderer";
 
 export const DEFAULT_SETTINGS: JustifySettings = {
-	enabled: true,
 	hyphenate: true,
 	greedyFallback: true,
 	minSpacingRatio: 0.5,
 	tightPenaltyThreshold: 0.75,
 	minWidth: 100,
+	maxCacheEntries: 200,
 };
 
 export class PretextJustifySettingTab extends PluginSettingTab {
@@ -28,21 +28,6 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Heading intentionally omitted — plugin name is shown in sidebar
-
-		new Setting(containerEl)
-			.setName("Enable justification")
-			.setDesc(
-				"Apply Knuth-Plass optimal justification to reading view paragraphs.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enabled)
-					.onChange(async (value) => {
-						this.plugin.settings.enabled = value;
-						await this.plugin.saveSettings();
-						this.plugin.refresh();
-					}),
-			);
 
 		new Setting(containerEl)
 			.setName("Hyphenation")
@@ -78,10 +63,17 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 					});
 			})
 			.addSlider((slider) => {
+				const val = slider.sliderEl.parentElement!.createSpan({
+					cls: "slider-value",
+					text: this.plugin.settings.minSpacingRatio.toFixed(2),
+				});
+				slider.sliderEl.parentElement!.insertBefore(val, slider.sliderEl);
 				slider
+					.setInstant(true)
 					.setLimits(0.3, 0.9, 0.05)
 					.setValue(this.plugin.settings.minSpacingRatio)
 					.onChange(async (value) => {
+						val.textContent = value.toFixed(2);
 						this.plugin.settings.minSpacingRatio = value;
 						await this.plugin.saveSettings();
 						this.plugin.refresh();
@@ -107,11 +99,54 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 					});
 			})
 			.addSlider((slider) => {
+				const val = slider.sliderEl.parentElement!.createSpan({
+					cls: "slider-value",
+					text: this.plugin.settings.tightPenaltyThreshold.toFixed(2),
+				});
+				slider.sliderEl.parentElement!.insertBefore(val, slider.sliderEl);
 				slider
+					.setInstant(true)
 					.setLimits(0.5, 1.0, 0.05)
 					.setValue(this.plugin.settings.tightPenaltyThreshold)
 					.onChange(async (value) => {
+						val.textContent = value.toFixed(2);
 						this.plugin.settings.tightPenaltyThreshold = value;
+						await this.plugin.saveSettings();
+						this.plugin.refresh();
+					});
+			});
+
+		// -- Cache size slider --
+
+		new Setting(containerEl)
+			.setName("Text cache size")
+			.setDesc(
+				"Number of paragraphs cached to avoid re-measurement on resize. " +
+				"Larger values improve resize responsiveness at the cost of memory. " +
+				`Default: ${DEFAULT_SETTINGS.maxCacheEntries}.`,
+			)
+			.addExtraButton((btn) => {
+				btn.setIcon("reset")
+					.onClick(async () => {
+						this.plugin.settings.maxCacheEntries = DEFAULT_SETTINGS.maxCacheEntries;
+						await this.plugin.saveSettings();
+						this.plugin.refresh();
+						this.display();
+					});
+			})
+			.addSlider((slider) => {
+				const val = slider.sliderEl.parentElement!.createSpan({
+					cls: "slider-value",
+					text: String(this.plugin.settings.maxCacheEntries),
+				});
+				slider.sliderEl.parentElement!.insertBefore(val, slider.sliderEl);
+				slider
+					.setInstant(true)
+					.setLimits(50, 1000, 50)
+					.setValue(this.plugin.settings.maxCacheEntries)
+					.onChange(async (value) => {
+						val.textContent = String(value);
+						this.plugin.settings.maxCacheEntries = value;
 						await this.plugin.saveSettings();
 						this.plugin.refresh();
 					});

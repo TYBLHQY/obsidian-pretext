@@ -32,6 +32,15 @@ import type {
  */
 const _spaceCache = new Map<string, number>();
 
+/**
+ * Clear all internal measurement caches. Called on plugin unload
+ * and when the user changes cache size settings.
+ */
+export function clearJustificationCaches(): void {
+	_spaceCache.clear();
+	_hyphenCache.clear();
+}
+
 export function measureSpaceWidth(font: string): number {
 	const cached = _spaceCache.get(font);
 	if (cached !== undefined) return cached;
