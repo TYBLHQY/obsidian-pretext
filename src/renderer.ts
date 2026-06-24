@@ -80,8 +80,10 @@ function getOrPrepare(
 
 	// Evict oldest entries when cache grows too large
 	if (_prepareCache.size > 200) {
-		const firstKey = _prepareCache.keys().next().value;
-		if (firstKey !== undefined) _prepareCache.delete(firstKey);
+		for (const key of _prepareCache.keys()) {
+			_prepareCache.delete(key);
+			break;
+		}
 	}
 
 	return prepared;

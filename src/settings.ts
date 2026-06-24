@@ -27,7 +27,7 @@ export class PretextJustifySettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName("Pretext Justify").setHeading();
+		// Heading intentionally omitted — plugin name is shown in sidebar
 
 		new Setting(containerEl)
 			.setName("Enable justification")
