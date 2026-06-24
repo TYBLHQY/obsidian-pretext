@@ -13,4 +13,12 @@
 !.github/**
 node_modules/
 main.js
-.claude/
+
+# .claude/ session data (project skills are tracked)
+.claude/projects/
+.claude/plans/
+.claude/*.jsonl
+.claude/settings.json
+.claude/settings.local.json
+!.claude/skills/
+!.claude/skills/**
