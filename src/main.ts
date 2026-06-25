@@ -12,21 +12,6 @@ import { clearCache as clearPretextCache } from "@chenglou/pretext";
 import { PretextJustifySettingTab, DEFAULT_SETTINGS } from "./settings";
 
 // ---------------------------------------------------------------------------
-// Debounce helper
-// ---------------------------------------------------------------------------
-
-function debounce(fn: () => void, ms: number): () => void {
-  let timer: number | null = null;
-  return () => {
-    if (timer !== null) window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      timer = null;
-      fn();
-    }, ms);
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
@@ -44,16 +29,12 @@ export default class PretextJustifyPlugin extends Plugin {
     }
   >();
 
-  /** Last time _rejustifyAll finished (used for resize-cooldown only). */
-  private _lastRejustifyAt = 0;
-
   /** Paragraphs awaiting async justification (rAF-paced, 2 per frame). */
   private _pending = new Set<HTMLElement>();
   private _processingRAF: number | null = null;
   private _scrollRAF: number | null = null;
 
   private _resizeObserver: ResizeObserver | null = null;
-  private _debouncedRejustify: () => void;
 
   /** After a file switch, delay processing by this long (ms) so the raw DOM
    *  can settle and we avoid visible raw→justified jumping. */
@@ -95,12 +76,8 @@ export default class PretextJustifyPlugin extends Plugin {
     );
 
     // Resize handling
-    this._debouncedRejustify = debounce(() => {
-      this._rejustifyAll();
-    }, 300);
-
     this._resizeObserver = new ResizeObserver(() => {
-      this._debouncedRejustify();
+      this._rejustifyAll();
     });
 
     this.app.workspace.onLayoutReady(() => {
@@ -270,10 +247,7 @@ export default class PretextJustifyPlugin extends Plugin {
       if (this._pending.has(p)) continue;
 
       // Visibility check only — font resolution is deferred to _processBatch
-      const rect = p.getBoundingClientRect();
-      const isVisible =
-        rect.bottom >= 0 && rect.top <= activeWindow.innerHeight;
-      if (!isVisible) continue;
+      if (!isElementVisible(p)) continue;
 
       this._pending.add(p);
     }
@@ -322,15 +296,7 @@ export default class PretextJustifyPlugin extends Plugin {
   private _rejustifyAll(): void {
     if (this._justified.size === 0) return;
 
-    // Cooldown: if _rejustifyAll just ran recently, the ResizeObserver most
-    // likely fired because our own DOM changes (paragraph height change →
-    // scrollbar appear/disappear → content width change).  Check the last
-    // _rejustifyAll* call time, NOT individual paragraph justifiedAt, so
-    // scroll-triggered justification doesn't poison the resize cooldown.
     const now = Date.now();
-    if (now - this._lastRejustifyAt < 400) return;
-    this._lastRejustifyAt = now;
-
     const entries = Array.from(this._justified.entries());
     this._justified.clear();
 
@@ -356,7 +322,22 @@ export default class PretextJustifyPlugin extends Plugin {
   );
       parent.replaceChild(freshP, el);
 
-      this._pending.add(freshP);
+      // Justify visible paragraphs immediately so viewport content
+      // updates in real-time during resize.  Off-screen paragraphs
+      // queue for the 2/frame rAF pipeline — reverted paragraphs from
+      // multiple _rejustifyAll cycles accumulate at the tail of
+      // _pending; deferring prevents under-viewport paragraphs from
+      // being pushed behind.
+      if (isElementVisible(freshP)) {
+        const font = getFontString(freshP);
+        if (font) {
+          this._justifyOneParagraph(freshP, font, now);
+        } else {
+          this._pending.add(freshP);
+        }
+      } else {
+        this._pending.add(freshP);
+      }
     }
 
     this._scheduleProcessing();
@@ -474,4 +455,13 @@ function getFontString(el: HTMLElement): string | null {
     }
   }
   return style.font;
+}
+
+/**
+ * Quick visibility check: true if any part of the element's bounding box
+ * intersects the viewport.
+ */
+function isElementVisible(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect();
+  return rect.bottom >= 0 && rect.top <= activeWindow.innerHeight;
 }
