@@ -204,7 +204,6 @@ export default class PretextJustifyPlugin extends Plugin {
       this._pending.delete(p);
 
       if (!p.isConnected) continue;
-      if (this._justified.has(p)) continue;
 
       const font = getFontString(p);
       if (!font) {
@@ -423,7 +422,7 @@ export default class PretextJustifyPlugin extends Plugin {
   // ------------------------------------------------------------------
 
   private _revertAll(): void {
-    for (const [el] of Array.from(this._justified.entries())) {
+    for (const [el] of this._justified) {
       if (!el.isConnected) continue;
       if (isJustified(el)) {
         revertToParagraph(el);
