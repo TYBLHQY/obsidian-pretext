@@ -44,6 +44,9 @@ export default class PretextJustifyPlugin extends Plugin {
     }
   >();
 
+  /** Last time _rejustifyAll finished (used for resize-cooldown only). */
+  private _lastRejustifyAt = 0;
+
   /** Paragraphs awaiting async justification (rAF-paced, 2 per frame). */
   private _pending = new Set<HTMLElement>();
   private _processingRAF: number | null = null;
@@ -94,7 +97,7 @@ export default class PretextJustifyPlugin extends Plugin {
     // Resize handling
     this._debouncedRejustify = debounce(() => {
       this._rejustifyAll();
-    }, 500);
+    }, 300);
 
     this._resizeObserver = new ResizeObserver(() => {
       this._debouncedRejustify();
@@ -319,14 +322,14 @@ export default class PretextJustifyPlugin extends Plugin {
   private _rejustifyAll(): void {
     if (this._justified.size === 0) return;
 
-    // Cooldown: if we just completed a batch pass within the last 2 s,
-    // the ResizeObserver most likely fired because justification changed
-    // paragraph heights.  Skip to avoid cascading re-justifies.
+    // Cooldown: if _rejustifyAll just ran recently, the ResizeObserver most
+    // likely fired because our own DOM changes (paragraph height change →
+    // scrollbar appear/disappear → content width change).  Check the last
+    // _rejustifyAll* call time, NOT individual paragraph justifiedAt, so
+    // scroll-triggered justification doesn't poison the resize cooldown.
     const now = Date.now();
-    const recent = Array.from(this._justified.values()).some(
-      (info) => now - info.justifiedAt < 800,
-    );
-    if (recent) return;
+    if (now - this._lastRejustifyAt < 400) return;
+    this._lastRejustifyAt = now;
 
     const entries = Array.from(this._justified.entries());
     this._justified.clear();
@@ -336,7 +339,10 @@ export default class PretextJustifyPlugin extends Plugin {
 
       const currentWidth = el.getBoundingClientRect().width;
       if (Math.abs(currentWidth - info.contentWidth) < 2) {
-        this._justified.set(el, info);
+        // Width hasn't changed meaningfully — keep the entry but update
+        // contentWidth to avoid drift from sub-threshold accumulation
+        // (e.g. slow panel drag that never moves >2 px in one step).
+        this._justified.set(el, { ...info, contentWidth: currentWidth });
         continue;
       }
 
@@ -363,6 +369,12 @@ export default class PretextJustifyPlugin extends Plugin {
       if (!el.isConnected) this._justified.delete(el);
     }
 
+    // Catch orphaned containers: elements that were temporarily detached by
+    // Obsidian's virtual scrolling and have since been reattached, but are no
+    // longer tracked in _justified (e.g. because a _rejustifyAll pass skipped
+    // them while they were disconnected).  Revert them to <p> and re-justify.
+    this._reclaimOrphanedContainers();
+
     this._observePreviewViews();
 
     const previewViews = Array.from(
@@ -372,6 +384,44 @@ export default class PretextJustifyPlugin extends Plugin {
     );
     for (const view of previewViews) {
       this._processSection(view);
+    }
+  }
+
+  /**
+   * Find .pretext-container elements that exist in the DOM but are not tracked
+   * in _justified.  These are orphaned by Obsidian's DOM recycling: the element
+   * was detached, reattached later, but _justified no longer knows about it.
+   *
+   * We revert them to <p> and add to _pending so they get re-justified at the
+   * current container width.
+   */
+  private _reclaimOrphanedContainers(): void {
+    const containers = Array.from(
+      this.app.workspace.containerEl.querySelectorAll<HTMLElement>(
+        ".pretext-container",
+      ),
+    );
+    for (const container of containers) {
+      if (this._justified.has(container)) continue;
+      if (!container.isConnected) continue;
+
+      const doc = container.ownerDocument;
+      const parent = container.parentElement;
+      if (!doc || !parent) continue;
+
+      // Move content from .pretext-line children into a new <p>,
+      // preserving inline formatting (bold, italic, etc.).
+      const freshP = doc.createElement("p");
+      const lines = container.querySelectorAll<HTMLElement>(".pretext-line");
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        while (line.firstChild) {
+          freshP.appendChild(line.firstChild);
+        }
+      }
+
+      parent.replaceChild(freshP, container);
+      this._pending.add(freshP);
     }
   }
 
