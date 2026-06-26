@@ -86,12 +86,20 @@ export function measureHyphenWidth(font: string): number {
 // ---------------------------------------------------------------------------
 
 /**
+ * Regex matching CJK characters (Chinese, Japanese, Korean) that are valid
+ * line-break points. Pretext splits CJK into individual grapheme segments;
+ * these breaks give the DP algorithm more freedom to distribute text evenly.
+ */
+const CJK_BREAK_RE = /[\u{4E00}-\u{9FFF}\u{3400}-\u{4DBF}\u{F900}-\u{FAFF}\u{3000}-\u{303F}\u{3040}-\u{309F}\u{30A0}-\u{30FF}\u{AC00}-\u{D7AF}]/u;
+
+/**
  * Enumerate all feasible break positions in the prepared text.
  *
  * Break candidates are placed at:
  *   - Index 0 (paragraph start)
  *   - After each space character
  *   - After each soft hyphen (&shy;, ­)
+ *   - After each CJK grapheme (character-level line break)
  *   - At the end of the paragraph (sentinel)
  */
 export function enumerateBreakCandidates(
@@ -111,6 +119,9 @@ export function enumerateBreakCandidates(
 			}
 		} else if (text.trim().length === 0 && i + 1 < n) {
 			// Space: break is possible after the space
+			candidates.push({ segIndex: i + 1, isSoftHyphen: false });
+		} else if (i + 1 < n && CJK_BREAK_RE.test(text)) {
+			// CJK grapheme: break possible after this character
 			candidates.push({ segIndex: i + 1, isSoftHyphen: false });
 		}
 	}
