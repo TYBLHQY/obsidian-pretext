@@ -231,11 +231,12 @@ export default class PretextJustifyPlugin extends Plugin {
   private _processSection(el: HTMLElement): void {
     const paragraphs: HTMLElement[] = [];
 
-    if (el.tagName === "P" && !el.closest(".pretext-container")) {
+    if (el.tagName === "P" && !el.closest(".pretext-container") && !el.closest(".callout")) {
       paragraphs.push(el);
     }
     el.querySelectorAll("p").forEach((p) => {
       if (p.closest(".pretext-container")) return;
+      if (p.closest(".callout")) return;
       paragraphs.push(p);
     });
 
