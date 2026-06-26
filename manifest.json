@@ -1,7 +1,7 @@
 {
 	"id": "pretext-justify",
 	"name": "Pretext Justify",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"minAppVersion": "1.6.6",
 	"description": "Optimal Knuth-Plass text justification for reading view.",
 	"author": "MYQ",
